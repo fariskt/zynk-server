@@ -23,7 +23,7 @@ import {notificationSocket} from './sockets/notificationSocket.js';
 connectDB();
 
 app.use(cors({
-    origin: "http://localhost:3000",
+    origin: ["http://localhost:3000","https://zynk-social-media.vercel.app"],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
 }));
@@ -50,7 +50,6 @@ const io = new Server(server, {
         methods: ["GET", "POST"]
     }
 });
-
 
 chatSocket(io)
 notificationSocket(io)
