@@ -46,7 +46,7 @@ app.use("/api/user/notification", notificationRoute);
 
 const io = new Server(server, {
     cors: {
-        origin: "http://localhost:3000",
+        origin: ["http://localhost:3000","https://zynk-social-media.vercel.app"],
         methods: ["GET", "POST"]
     }
 });
