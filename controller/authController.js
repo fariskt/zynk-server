@@ -1,10 +1,10 @@
-const User = require("../models/userSchema");
-const bcrypt = require("bcrypt");
-const { generateAccessToken } = require("../utils/generateJwt");
-const crypto = require("crypto");
-const { sendEmail } = require("../helpers/nodeMailer");
+import User  from "../models/userSchema.js";
+import bcrypt  from "bcrypt" ;
+import { generateAccessToken }  from "../utils/generateJwt.js";
+import crypto  from "crypto";
+import { sendEmail }  from "../helpers/nodeMailer.js";
 
-exports.registerUser = async (req, res) => {
+export const registerUser = async (req, res) => {
   const { fullname, email, password } = req.body;
   const existsUserWithEmail = await User.findOne({ email: email });
   if (existsUserWithEmail) {
@@ -35,7 +35,7 @@ exports.registerUser = async (req, res) => {
   });
 };
 
-exports.loginUser = async (req, res) => {
+export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -64,14 +64,14 @@ exports.loginUser = async (req, res) => {
   res.cookie("token", accessToken, {
     httpOnly: true,
     secure: false,
-    maxAge: 3600000,
+    maxAge: 3 * 24 * 60* 60 * 1000,
   });
 
   res.status(200).json({
     success: true,
     message: "Login successful",
     user: {
-      id: user._id,
+      _id: user._id,
       fullname: user.fullname,
       email: user.email,
       role: user.role,
@@ -86,7 +86,7 @@ exports.loginUser = async (req, res) => {
   });
 };
 
-exports.forgotPassword = async (req, res) => {
+export const forgotPassword = async (req, res) => {
   const { email } = req.body;
   const user = await User.findOne({ email: email });
   if (!user) {
@@ -106,7 +106,7 @@ exports.forgotPassword = async (req, res) => {
   res.status(200).json({ success: true, message: "Password reset email sent" });
 };
 
-exports.resetPassword = async (req, res) => {
+export const resetPassword = async (req, res) => {
   const { newPassword, token } = req.body;
 
   const user = await User.findOne({ resetPasswordToken: token });
@@ -127,7 +127,7 @@ exports.resetPassword = async (req, res) => {
   res.status(200).json({ success: true, message: "Password has been reset" });
 };
 
-exports.logout = async (req, res) => {
+export const logout = async (req, res) => {
   res.clearCookie("token", {
     httpOnly: true,
     secure: false,
@@ -135,7 +135,7 @@ exports.logout = async (req, res) => {
   return res.status(200).json({ message: "Logged out successfully" });
 };
 
-exports.getLoginedUser = async (req, res) => {
+export const getLoginedUser = async (req, res) => {
   const userId = req.user.id;
   const user = await User.findOne({ _id: userId }).select("-password")
   if (!user) {

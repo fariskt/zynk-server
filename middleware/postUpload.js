@@ -1,6 +1,6 @@
-const multer = require("multer")
-const cloudinary = require("../config/cloudinary")
-const {CloudinaryStorage}= require("multer-storage-cloudinary")
+import multer from "multer"
+import cloudinary from "../config/cloudinary.js"
+import {CloudinaryStorage} from "multer-storage-cloudinary"
 
 const storage = new CloudinaryStorage({
     cloudinary: cloudinary,
@@ -12,4 +12,4 @@ const storage = new CloudinaryStorage({
 
 const postUpload = multer({storage: storage})
 
-module.exports = postUpload
+export default postUpload

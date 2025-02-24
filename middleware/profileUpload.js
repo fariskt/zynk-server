@@ -1,15 +1,25 @@
-const multer = require("multer")
-const cloudinary = require("../config/cloudinary")
-const {CloudinaryStorage}= require("multer-storage-cloudinary")
+import cloudinary  from "../config/cloudinary.js"
+import multer from "multer"
+import { CloudinaryStorage } from "multer-storage-cloudinary"
 
-const profilePicStorage = new CloudinaryStorage({
+
+const profilePicturesStorage = new CloudinaryStorage({
     cloudinary: cloudinary,
-    params: {
-        folder: "profile_pictures",
-        allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp']
+    params: (req,file)=> {
+        let folder = "others"
+        if(file.fieldname === "profilePicture"){
+            folder = "profile_pictures"
+        }else if(file.fieldname === "coverPhoto"){
+            folder = "cover_photos"
+        }
+        return {
+            folder: folder,
+            allowed_formats: ["jpg", "jpeg","png", "gif", "webp"],
+            public_id: `${file.originalname.split(".")[0]}-${Date.now()}}`,
+        }
     }
 })
 
-const profilePictureUpload = multer({storage: profilePicStorage})
+const profilePicturesUpload = multer({storage: profilePicturesStorage})
 
-module.exports = profilePictureUpload
+export default profilePicturesUpload
