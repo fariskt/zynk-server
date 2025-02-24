@@ -1,8 +1,8 @@
-import User from "../models/userSchema.js";
-import bcrypt from "bcrypt";
-import { generateAccessToken } from "../utils/generateJwt.js";
-import crypto from "crypto";
-import { sendEmail } from "../helpers/nodeMailer.js";
+import User  from "../models/userSchema.js";
+import bcrypt  from "bcrypt" ;
+import { generateAccessToken }  from "../utils/generateJwt.js";
+import crypto  from "crypto";
+import { sendEmail }  from "../helpers/nodeMailer.js";
 
 export const registerUser = async (req, res) => {
   const { fullname, email, password } = req.body;
@@ -10,6 +10,7 @@ export const registerUser = async (req, res) => {
   if (existsUserWithEmail) {
     return res.status(400).json({ message: "User already exists" });
   }
+
 
   const hashPassword = await bcrypt.hash(password, 10);
 
@@ -29,7 +30,7 @@ export const registerUser = async (req, res) => {
       id: newUser._id,
       fullname: newUser.fullname,
       email: newUser.email,
-      role: newUser.role,
+      role: newUser.role
     },
   });
 };
@@ -44,7 +45,7 @@ export const loginUser = async (req, res) => {
     });
   }
 
-  const user = await User.findOne({ email: email });
+  const user = await User.findOne({ email: email })
   if (!user) {
     return res.status(400).json({ message: "User not exists" });
   }
@@ -62,10 +63,11 @@ export const loginUser = async (req, res) => {
 
   res.cookie("token", accessToken, {
     httpOnly: true,
-    secure: true, // Set to true for HTTPS
-    sameSite: "None", // Allows cross-site cookies
-    maxAge: 3 * 24 * 60 * 60 * 1000, // 3 days
+    secure: process.env.NODE_ENV === "production", // Automatically set based on environment
+    sameSite: "Strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
+
 
   res.status(200).json({
     success: true,
@@ -77,11 +79,11 @@ export const loginUser = async (req, res) => {
       role: user.role,
       following: user.following,
       followers: user.followers,
-      bio: user?.bio,
-      gender: user?.gender,
-      birthday: user?.birthday,
-      country: user?.country,
-      profilePicture: user.profilePicture || undefined,
+      bio:user?.bio,
+      gender:user?.gender,
+      birthday:user?.birthday,
+      country:user?.country,
+      profilePicture:user.profilePicture || undefined,
     },
   });
 };
@@ -137,11 +139,12 @@ export const logout = async (req, res) => {
 
 export const getLoginedUser = async (req, res) => {
   const userId = req.user.id;
-  const user = await User.findOne({ _id: userId }).select("-password");
+  const user = await User.findOne({ _id: userId }).select("-password")
   if (!user) {
     return res.status(401).json({ message: "User not found" });
   }
-  res
-    .status(200)
+  res.status(200)
     .json({ success: true, message: "User fetched sucessfully", user });
 };
+
+
