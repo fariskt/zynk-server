@@ -25,7 +25,6 @@ export const saveMessage = async (data) => {
 };
 
 export const getUserChats = async (req, res) => {
-  console.log("multiple");
   const { userId } = req.params;
 
   // Validate ObjectId format

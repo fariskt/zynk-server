@@ -23,9 +23,9 @@ import { notificationSocket } from './sockets/notificationSocket.js';
 connectDB();
 
 app.use(cors({
-    origin: ["http://localhost:3000", "https://zynk-social-media.vercel.app"],
+    origin: ["http://localhost:3000", "https://zynk-social-media.vercel.app","https://zynk-social-media.onrender.com"],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-    credentials: true, // ✅ Allow cookies/credentials
+    credentials: true, 
 }));
 
 app.use(express.json());
@@ -34,7 +34,7 @@ app.use(cookieParser());
 
 const io = new Server(server, {
     cors: {
-        origin: ["http://localhost:3000", "https://zynk-social-media.vercel.app"],
+        origin: ["http://localhost:3000", "https://zynk-social-media.vercel.app","https://zynk-social-media.onrender.com"],
         methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
         credentials: true,
     }
