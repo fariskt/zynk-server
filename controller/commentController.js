@@ -120,10 +120,9 @@ export const getCommentReplies = async (req, res) => {
   res.status(200).json({ success: true, replies });
 };
 
-//will use later
-export const toggleLikeUnlikeComment = async () => {
+export const toggleLikeUnlikeComment = async (req,res) => {
   const { commentId } = req.params;
-  const userId = req.user.id;
+  const userId = req.user.id;  
 
   const comment = await Comment.findById(commentId);
   if (!comment) return res.status(404).json({ message: "Comment not found" });
