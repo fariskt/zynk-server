@@ -55,6 +55,7 @@ export const getUserChats = async (req, res) => {
     const uniqueChatUsers = [
       ...new Set(chatUsers.map((user) => user._id.toString())),
     ];
+    
 
     // Populate user details
     const users = await User.find({ _id: { $in: uniqueChatUsers } });

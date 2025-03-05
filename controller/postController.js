@@ -33,7 +33,7 @@ export const createPost = async (req, res) => {
 export const getPosts = async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
   const posts = await Post.find({ isDeleted: false })
-    .populate("userId", "fullname profilePicture")
+    .populate("userId", "_id isVerified fullname profilePicture")
     .skip((page - 1) * limit)
     .limit(limit)
     .sort({ createdAt: -1 });
@@ -57,7 +57,7 @@ export const getPostById = async (req, res) => {
 
   const post = await Post.findOne({ _id: postId, isDeleted: false }).populate(
     "userId",
-    "fullname profilePicture"
+    "_id fullname isVerified profilePicture"
   );
   if (!post) {
     return res.status(404).json({ message: "Posts not found" });
@@ -78,7 +78,7 @@ export const getUserPostById = async (req, res) => {
     return res.status(404).json({ message: "User id missing!" });
   }
   const posts = await Post.find({ userId: userId, isDeleted: false })
-    .populate("userId", "fullname profilePicture")
+    .populate("userId", "_id isVerified fullname profilePicture")
     .sort({ createdAt: -1 })
     .skip((page - 1) * limit)
     .limit(limit);

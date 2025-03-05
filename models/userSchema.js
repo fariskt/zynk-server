@@ -16,6 +16,7 @@ const userSchema = new mongoose.Schema(
       enum: ["member", "admin"],
       default: "member",
     },
+    isVerified: {type:Boolean, default:false},
     postCount: { type: Number, default: 0 },
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
