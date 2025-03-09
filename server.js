@@ -19,11 +19,12 @@ import notificationRoute from './routes/notificationRoute.js';
 import chatRoute from './routes/chatRoute.js';
 import { chatSocket } from './sockets/chatSocket.js';
 import { notificationSocket } from './sockets/notificationSocket.js';
+import { videoCall } from './sockets/video.js';
 
 connectDB();
 
 app.use(cors({
-    origin: ["http://localhost:3000", "https://zynk-social-media.vercel.app","https://zynk-social-media.onrender.com"],
+    origin: ["http://localhost:3000", "https://zynk-social-media.vercel.app","https://zynk-social-media.onrender.com","http://localhost:5173"],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true, 
 }));
@@ -34,7 +35,7 @@ app.use(cookieParser());
 
 const io = new Server(server, {
     cors: {
-        origin: ["http://localhost:3000", "https://zynk-social-media.vercel.app","https://zynk-social-media.onrender.com"],
+        origin: ["http://localhost:3000", "https://zynk-social-media.vercel.app","https://zynk-social-media.onrender.com","http://localhost:5173"],
         methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
         credentials: true,
     }
@@ -56,6 +57,7 @@ app.use("/api/user/notification", notificationRoute);
 
 chatSocket(io);
 notificationSocket(io);
+videoCall(io)
 
 server.listen(port, () => {
     console.log(`Server connected to port ${port} successfully`);
