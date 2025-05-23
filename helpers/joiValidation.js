@@ -1,6 +1,7 @@
-const Joi = require("joi");
+import Joi from "joi"
 
-const registerUserSchema = Joi.object({
+
+export const registerUserSchema = Joi.object({
     fullname: Joi.string().min(3).required().messages({
         "string.base": "fullname must be a string",
         "string.empty": "fullname is required",
@@ -20,8 +21,3 @@ const registerUserSchema = Joi.object({
         "string.empty": "Confirm password is required"
     })
 })
-
-module.exports = {
-    registerUserSchema
-}
-

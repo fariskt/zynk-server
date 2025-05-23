@@ -1,16 +1,16 @@
-const User = require("../models/userSchema");
-const bcrypt = require("bcrypt");
-const { generateAccessToken } = require("../utils/generateJwt");
-const crypto = require("crypto");
-const { sendEmail } = require("../helpers/nodeMailer");
+import User from "../models/userSchema.js";
+import bcrypt from "bcrypt";
+import { generateAccessToken } from "../utils/generateJwt.js";
+import crypto from "crypto";
+import { sendEmail } from "../helpers/nodeMailer.js";
+import redisClient from "../config/redis.js";
 
-exports.registerUser = async (req, res) => {
+export const registerUser = async (req, res) => {
   const { fullname, email, password } = req.body;
   const existsUserWithEmail = await User.findOne({ email: email });
   if (existsUserWithEmail) {
     return res.status(400).json({ message: "User already exists" });
   }
-
 
   const hashPassword = await bcrypt.hash(password, 10);
 
@@ -30,12 +30,12 @@ exports.registerUser = async (req, res) => {
       id: newUser._id,
       fullname: newUser.fullname,
       email: newUser.email,
-      role: newUser.role
+      role: newUser.role,
     },
   });
 };
 
-exports.loginUser = async (req, res) => {
+export const loginUser = async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -45,7 +45,7 @@ exports.loginUser = async (req, res) => {
     });
   }
 
-  const user = await User.findOne({ email: email })
+  const user = await User.findOne({ email: email });
   if (!user) {
     return res.status(400).json({ message: "User not exists" });
   }
@@ -64,29 +64,29 @@ exports.loginUser = async (req, res) => {
   res.cookie("token", accessToken, {
     httpOnly: true,
     secure: false,
-    maxAge: 3600000,
+    maxAge: 3 * 24 * 60 * 60 * 1000,
   });
 
   res.status(200).json({
     success: true,
     message: "Login successful",
     user: {
-      id: user._id,
+      _id: user._id,
       fullname: user.fullname,
       email: user.email,
       role: user.role,
       following: user.following,
       followers: user.followers,
-      bio:user?.bio,
-      gender:user?.gender,
-      birthday:user?.birthday,
-      country:user?.country,
-      profilePicture:user.profilePicture || undefined,
+      bio: user?.bio,
+      gender: user?.gender,
+      birthday: user?.birthday,
+      country: user?.country,
+      profilePicture: user.profilePicture || undefined,
     },
   });
 };
 
-exports.forgotPassword = async (req, res) => {
+export const forgotPassword = async (req, res) => {
   const { email } = req.body;
   const user = await User.findOne({ email: email });
   if (!user) {
@@ -106,7 +106,7 @@ exports.forgotPassword = async (req, res) => {
   res.status(200).json({ success: true, message: "Password reset email sent" });
 };
 
-exports.resetPassword = async (req, res) => {
+export const resetPassword = async (req, res) => {
   const { newPassword, token } = req.body;
 
   const user = await User.findOne({ resetPasswordToken: token });
@@ -127,7 +127,7 @@ exports.resetPassword = async (req, res) => {
   res.status(200).json({ success: true, message: "Password has been reset" });
 };
 
-exports.logout = async (req, res) => {
+export const logout = async (req, res) => {
   res.clearCookie("token", {
     httpOnly: true,
     secure: false,
@@ -135,14 +135,43 @@ exports.logout = async (req, res) => {
   return res.status(200).json({ message: "Logged out successfully" });
 };
 
-exports.getLoginedUser = async (req, res) => {
+export const getLoginedUser = async (req, res) => {
   const userId = req.user.id;
-  const user = await User.findOne({ _id: userId }).select("-password")
+  const user = await User.findOne({ _id: userId }).select("-password");
   if (!user) {
     return res.status(401).json({ message: "User not found" });
   }
-  res.status(200)
+  res
+    .status(200)
     .json({ success: true, message: "User fetched sucessfully", user });
 };
 
+function generateOTP() {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
 
+export const sendOtp = async (req, res) => {
+  const { email } = req.body;
+  const otp = generateOTP();
+  await redisClient.set(`otp:${email}`, otp, { expiration: 300 });
+  await sendEmail(email, "Otp has been sent", otp);
+  return res.status(200).json({ message: "Otp sent success!" });
+};
+
+export const verifyOtp = async (req, res) => {
+  const { otp, email } = req.body;
+  if (!email || !otp) {
+    return res.status(400).json({ message: "Email and otp required" });
+  }
+  try {
+    const storedOtp = await redisClient.get(`otp:${email}`);
+    const user = await User.findOne({email})
+    if (storedOtp === otp) {
+      // user.
+      await redisClient.del(`otp:${email}`);
+      return res.json({ message: "OTP verified successfully" });
+    }
+  } catch (error) {
+    return res.status(400).json({ error: "Invalid or expired OTP" });
+  }
+};

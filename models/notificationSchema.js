@@ -1,12 +1,18 @@
-const mongoose = require("mongoose")
+import mongoose from "mongoose"
 
 const notificationSchema = ({
-    reciever:{type: mongoose.Schema.Types.ObjectId, ref: "User"},
+    receiver:{type: mongoose.Schema.Types.ObjectId, ref: "User"},
     sender: {type: mongoose.Schema.Types.ObjectId, ref: "User"},
     text: {type: String, required: true},
-    read: {type: Boolean, default: false}
+    type: { 
+        type: String, 
+        enum: ['follow', 'like', 'comment', 'share', 'mention'], 
+        default: 'follow' 
+    },
+    read: {type: Boolean, default: false},
+    createdAt: { type: Date, default: Date.now }
 })
 
 const Notification = mongoose.model("Notification",notificationSchema)
 
-module.exports = Notification
+export default Notification

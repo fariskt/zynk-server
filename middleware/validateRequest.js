@@ -10,4 +10,4 @@ const validateUser = (schema) => {
   };
 };
 
-module.exports = validateUser
+export default validateUser
