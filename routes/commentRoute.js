@@ -1,14 +1,14 @@
 import express from "express"
 const router = express.Router()
-import { getCommentByPostId, commentOnPost, replayToComment, getCommentReplies } from "../controller/commentController.js"
+import { getCommentByPostId, commentOnPost, replayToComment, getCommentReplies, toggleLikeUnlikeComment } from "../controller/commentController.js"
 import asyncHandler from "../middleware/errorHandler.js";
 import verifyToken from "../middleware/verifyToken.js";
 
-// router.get("/comments", asyncHandler(getAllComments));
 router.post("/:userId", verifyToken, asyncHandler(commentOnPost));
 router.get("/:postId", asyncHandler(getCommentByPostId));
 router.get("/replies/:commentId", verifyToken, asyncHandler(getCommentReplies))
-router.post("/replay/:commentId", verifyToken, asyncHandler(replayToComment))
+router.post("/reply/:commentId", verifyToken, asyncHandler(replayToComment))
+router.put("/like/:commentId", verifyToken, asyncHandler(toggleLikeUnlikeComment))
 
 
 export default router;    

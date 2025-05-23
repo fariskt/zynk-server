@@ -27,7 +27,8 @@ export const commentOnPost = async (req, res) => {
 
   await Promise.all([
     newComment.save(),
-    Post.findByIdAndUpdate(postId, { $inc: { commentCount: 1 } }),
+    !newComment.parentCommentId &&
+      Post.findByIdAndUpdate(postId, { $inc: { commentCount: 1 } }),
   ]);
 
   const notification = new Notification({
@@ -56,25 +57,6 @@ export const commentOnPost = async (req, res) => {
   });
 };
 
-// export const getAllComments = async (req, res) => {
-//   const comments = await Comment.find({ parentCommentId: null })
-//     .sort({ createdAt: -1 })
-//     .populate({
-//       path: "userId",
-//       select: "fullname profilePicture",
-//     });
-
-//   if (!comments.length) {
-//     return res.status(404).json({ message: "No comments found" });
-//   }
-
-//   return res.status(200).json({
-//     message: "All comments fetched successfully",
-//     success: true,
-//     data: comments,
-//   });
-// };
-
 export const getCommentByPostId = async (req, res) => {
   const { postId } = req.params;
 
@@ -83,10 +65,16 @@ export const getCommentByPostId = async (req, res) => {
     return res.status(404).json({ message: "Post not found" });
   }
 
-  const comments = await Comment.find({ postId })
-      .populate("userId", "fullname profilePicture") // Get user info
-      .sort({ createdAt: -1 });
+  const comments = await Comment.find({ postId, parentCommentId: null })
+    .populate("userId", "fullname profilePicture")
+    .sort({ createdAt: -1 }).lean()
 
+    const comentsWithReplyCount = await Promise.all(
+      comments.map(async (comment)=> {
+        const replyCount = await Comment.countDocuments({parentCommentId: comment._id})
+        return {...comment, replyCount}
+      })
+    )
 
   if (!comments) {
     return res.status(404).json({ message: "No comments on this post" });
@@ -95,12 +83,13 @@ export const getCommentByPostId = async (req, res) => {
   return res.status(200).json({
     message: "Comment fetched success",
     success: true,
-    data: comments,
+    data: comentsWithReplyCount,
   });
 };
 
-//remove later
+//reply
 export const replayToComment = async (req, res) => {
+  console.log("come");
   const userId = req.user.id;
   const { commentId } = req.params;
   const { text } = req.body;
@@ -122,83 +111,31 @@ export const replayToComment = async (req, res) => {
   res.status(201).json({ message: "Replied to comment success", reply });
 };
 
-// //remove later
-// export const getCommentReplies = async (req, res) => {
-//   const { commentId } = req.params;
-
-//   const replies = await Comment.aggregate([
-//     { $match: { _id: new mongoose.Types.ObjectId(commentId) } }, // Start from this comment
-//     {
-//       $graphLookup: {
-//         from: "comments",
-//         startWith: "$_id",
-//         connectFromField: "_id",
-//         connectToField: "parentCommentId",
-//         as: "allReplies",
-//       },
-//     },
-//     {
-//       $unwind: "$allReplies",
-//     },
-//     {
-//       $lookup: {
-//         from: "users",
-//         localField: "allReplies.userId",
-//         foreignField: "_id",
-//         as: "allReplies.user",
-//       },
-//     },
-//     { $unwind: "$allReplies.user" },
-//     {
-//       $group: {
-//         _id: "$_id",
-//         replies: { $push: "$allReplies" },
-//       },
-//     },
-//   ]);
-
-//   res.status(200).json({
-//     message: "Replies fetched successfully",
-//     success: true,
-//     replies: replies.length > 0 ? replies[0].replies : [],
-//   });
-// };
-
-
-// Get replies for a specific comment
 export const getCommentReplies = async (req, res) => {
-  try {
-    const { commentId } = req.params;
-    const replies = await Comment.find({ parentCommentId: commentId })
-      .populate("user", "fullname username profilePicture")
-      .sort({ createdAt: 1 });
+  const { commentId } = req.params;
+  const replies = await Comment.find({ parentCommentId: commentId })
+    .populate("userId", "fullname profilePicture")
+    .sort({ createdAt: -1 });
 
-    res.status(200).json({ success: true, replies });
-    console.log(replies);
-    
-  } catch (error) {
-    res.status(500).json({ message: "Failed to fetch replies", error: error.message });
-  }
+  res.status(200).json({ success: true, replies });
 };
 
-
-//will use later
-export const toggleLikeUnlikeComment = async()=> {
+export const toggleLikeUnlikeComment = async (req,res) => {
   const { commentId } = req.params;
-    const userId = req.user.id;
+  const userId = req.user.id;  
 
-    const comment = await Comment.findById(commentId);
-    if (!comment) return res.status(404).json({ message: "Comment not found" });
+  const comment = await Comment.findById(commentId);
+  if (!comment) return res.status(404).json({ message: "Comment not found" });
 
-    const isLiked = comment.likes.includes(userId);
+  const isLiked = comment.likes.includes(userId);
 
-    if (isLiked) {
-      comment.likes.pull(userId); // Unlike
-    } else {
-      comment.likes.push(userId); // Like
-    }
+  if (isLiked) {
+    comment.likes.pull(userId); // Unlike
+  } else {
+    comment.likes.push(userId); // Like
+  }
 
-    await comment.save();
+  await comment.save();
 
-    res.status(200).json({ success: true, likes: comment.likes.length });
-}
+  res.status(200).json({ success: true, likes: comment.likes.length });
+};

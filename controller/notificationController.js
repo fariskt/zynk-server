@@ -1,3 +1,4 @@
+import Notification from "../models/notificationSchema.js";
 
 export const getNotification = async(req,res)=> {
     const userId = req.user.id;

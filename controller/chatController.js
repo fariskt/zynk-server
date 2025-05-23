@@ -25,7 +25,6 @@ export const saveMessage = async (data) => {
 };
 
 export const getUserChats = async (req, res) => {
-  console.log("multiple");
   const { userId } = req.params;
 
   // Validate ObjectId format
@@ -56,6 +55,7 @@ export const getUserChats = async (req, res) => {
     const uniqueChatUsers = [
       ...new Set(chatUsers.map((user) => user._id.toString())),
     ];
+    
 
     // Populate user details
     const users = await User.find({ _id: { $in: uniqueChatUsers } });

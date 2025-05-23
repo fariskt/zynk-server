@@ -2,7 +2,7 @@ import express from "express"
 import asyncHandler from "../middleware/errorHandler.js"
 import verifyToken from "../middleware/verifyToken.js"
 import validateUser from "../middleware/validateRequest.js"
-import { registerUser, loginUser, logout, resetPassword, forgotPassword, getLoginedUser, sendOtp } from "../controller/authController.js";
+import { registerUser, loginUser, logout, resetPassword, forgotPassword, getLoginedUser, verifyOtp, resendOtp } from "../controller/authController.js";
 import { registerUserSchema } from "../helpers/joiValidation.js";
 const router = express.Router()
 
@@ -13,6 +13,7 @@ router.post("/logout", asyncHandler(logout))
 router.post("/forgot-password" , asyncHandler(forgotPassword))
 router.post("/reset-password" , asyncHandler(resetPassword))
 router.get("/me" , verifyToken, asyncHandler(getLoginedUser))
-router.post("/sendotp" , asyncHandler(sendOtp))
+router.post("/verifyotp" , asyncHandler(verifyOtp))
+router.post("/resentotp" , asyncHandler(resendOtp))
 
 export default router

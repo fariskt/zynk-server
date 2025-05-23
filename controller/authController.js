@@ -23,6 +23,26 @@ export const registerUser = async (req, res) => {
   });
 
   await newUser.save();
+  const token = crypto.randomBytes(20).toString("hex");
+  const otp = generateOTP();
+
+  await redisClient.set(
+    `otp_session:${token}`,
+    JSON.stringify({ email, otp, createdAt: Date.now() }),
+    "EX",
+    300
+  );
+
+  const message = `Your one time password for Zynk is ${otp}. It will expire in 5 minutes.`;
+  await sendEmail(email, "Zynk Account Verification Code", message);
+
+  res.cookie("otp_token", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+    maxAge: 300000,
+  });
+
   res.status(201).json({
     success: true,
     message: "User registered sucessfully",
@@ -49,6 +69,11 @@ export const loginUser = async (req, res) => {
   if (!user) {
     return res.status(400).json({ message: "User not exists" });
   }
+  if (!user.isVerified) {
+    return res
+      .status(400)
+      .json({ message: "Please verify your account to login" });
+  }
 
   const matchPassword = await bcrypt.compare(password, user.password);
   if (!matchPassword) {
@@ -63,8 +88,9 @@ export const loginUser = async (req, res) => {
 
   res.cookie("token", accessToken, {
     httpOnly: true,
-    secure: false,
-    maxAge: 3 * 24 * 60 * 60 * 1000,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "none",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
   res.status(200).json({
@@ -150,28 +176,85 @@ function generateOTP() {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-export const sendOtp = async (req, res) => {
-  const { email } = req.body;
-  const otp = generateOTP();
-  await redisClient.set(`otp:${email}`, otp, { expiration: 300 });
-  await sendEmail(email, "Otp has been sent", otp);
-  return res.status(200).json({ message: "Otp sent success!" });
-};
-
 export const verifyOtp = async (req, res) => {
-  const { otp, email } = req.body;
-  if (!email || !otp) {
-    return res.status(400).json({ message: "Email and otp required" });
+  const { otp } = req.body;
+  const otp_token = req.cookies.otp_token;
+  const session = await redisClient.get(`otp_session:${otp_token}`);
+  if (!session) {
+    return res.status(400).json({ error: "OTP session expired or invalid" });
   }
+
+  const { email } = JSON.parse(session);
+  const user = await User.findOne({ email });
+  if (!otp_token)
+    return res.status(400).json({ error: "No OTP session token" });
+
+  const storedOtp = await redisClient.get(`otp_session:${otp_token}`);
+  if (!storedOtp)
+    return res.status(400).json({ error: "OTP session expired or invalid" });
+
   try {
-    const storedOtp = await redisClient.get(`otp:${email}`);
-    const user = await User.findOne({email})
     if (storedOtp === otp) {
-      // user.
-      await redisClient.del(`otp:${email}`);
+      user.isVerified = true;
+      await user.save();
+      await redisClient.del(`otp_session:${otp_token}`);
       return res.json({ message: "OTP verified successfully" });
+    } else {
+      await redisClient.del(`otp_session:${otp_token}`);
+      return res.status(400).json({ error: "Invalid Otp" });
     }
   } catch (error) {
     return res.status(400).json({ error: "Invalid or expired OTP" });
   }
+};
+
+export const resendOtp = async (req, res) => {
+  const otp_token = req.cookies.otp_token;
+  let email;
+
+  if (otp_token) {
+    const session = await redisClient.get(`otp_session:${otp_token}`);
+    if (session) {
+      email = JSON.parse(session).email;
+    } else {
+      return res.status(400).json({ error: "OTP session expired. Please request a new OTP." });
+    }
+  } else {
+    email = req.body?.email;
+    if (!email) {
+      return res
+        .status(400)
+        .json({
+          error: "Session expired. Please register or request a new OTP.",
+        });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: "User not found" });
+  }
+  const newOtp = generateOTP();
+  const newToken = crypto.randomBytes(20).toString("hex");
+
+  await redisClient.set(
+    `otp_session:${newToken}`,
+    JSON.stringify({ email, otp: newOtp, createdAt: Date.now() }),
+    "EX",
+    300
+  );
+
+  await redisClient.set(`otp_email_to_token:${email}`, newToken, "EX", 300);
+
+  if (otp_token) await redisClient.del(`otp_session:${otp_token}`);
+
+  const message = `Your new one-time password for Zynk is ${newOtp}, and it will expire in 5 minutes.`;
+  await sendEmail(email, "Zynk OTP Verification", message);
+
+  res.cookie("otp_token", newToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "none",
+    maxAge: 300000,
+  });
+
+  return res.status(200).json({ message: "OTP resent successfully" });
 };
