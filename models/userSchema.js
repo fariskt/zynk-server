@@ -17,6 +17,7 @@ const userSchema = new mongoose.Schema(
       default: "member",
     },
     isVerified: {type:Boolean, default:false},
+    isPremium: {type:Boolean, default:false},
     postCount: { type: Number, default: 0 },
     followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],

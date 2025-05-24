@@ -89,7 +89,7 @@ export const loginUser = async (req, res) => {
   res.cookie("token", accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "none",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 
@@ -177,36 +177,45 @@ function generateOTP() {
 }
 
 export const verifyOtp = async (req, res) => {
-  const { otp } = req.body;
-  const otp_token = req.cookies.otp_token;
-  const session = await redisClient.get(`otp_session:${otp_token}`);
-  if (!session) {
-    return res.status(400).json({ error: "OTP session expired or invalid" });
-  }
-
-  const { email } = JSON.parse(session);
-  const user = await User.findOne({ email });
-  if (!otp_token)
-    return res.status(400).json({ error: "No OTP session token" });
-
-  const storedOtp = await redisClient.get(`otp_session:${otp_token}`);
-  if (!storedOtp)
-    return res.status(400).json({ error: "OTP session expired or invalid" });
-
   try {
-    if (storedOtp === otp) {
-      user.isVerified = true;
-      await user.save();
-      await redisClient.del(`otp_session:${otp_token}`);
-      return res.json({ message: "OTP verified successfully" });
-    } else {
-      await redisClient.del(`otp_session:${otp_token}`);
-      return res.status(400).json({ error: "Invalid Otp" });
+    const { otp } = req.body;
+    
+    const otp_token = req.cookies.otp_token;
+    
+    console.log("is it that", req.cookies);
+    if (!otp_token) {
+      return res.status(400).json({ error: "No OTP session token" });
     }
+
+    const session = await redisClient.get(`otp_session:${otp_token}`);
+    if (!session) {
+      return res.status(400).json({ error: "OTP session expired or invalid" });
+    }
+
+    const { email, otp: storedOtp } = JSON.parse(session);
+
+    if (storedOtp !== otp) {
+      await redisClient.del(`otp_session:${otp_token}`);
+      return res.status(400).json({ error: "Invalid OTP" });
+    }
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    user.isVerified = true;
+    await user.save();
+    await redisClient.del(`otp_session:${otp_token}`);
+
+    return res.json({ message: "OTP verified successfully" });
+
   } catch (error) {
-    return res.status(400).json({ error: "Invalid or expired OTP" });
+    console.error("OTP verification error:", error);
+    return res.status(500).json({ error: "Something went wrong" });
   }
 };
+
 
 export const resendOtp = async (req, res) => {
   const otp_token = req.cookies.otp_token;
@@ -252,7 +261,7 @@ export const resendOtp = async (req, res) => {
   res.cookie("otp_token", newToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "none",
+    sameSite: process.env.NODE_ENV === "production" ? "none" : "strict" ,
     maxAge: 300000,
   });
 
