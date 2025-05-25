@@ -1,5 +1,5 @@
-import  mongoose  from "mongoose";
-import  Chat from "../models/chatModel.js";
+import mongoose from "mongoose";
+import Chat from "../models/chatModel.js";
 import User from "../models/userSchema.js";
 
 export const getMessages = async (req, res) => {
@@ -13,9 +13,26 @@ export const getMessages = async (req, res) => {
 
   if (!messages) {
     return res.status(404).json({ message: "No chat found" });
-  }  
+  }
 
-  return res.status(200).json({ sucess: true, message: "Chat fetched success", data: messages });
+  return res.status(200).json({
+    success: true,
+    message: "Chat fetched successfully",
+    data: messages,
+  });
+};
+
+export const getUnreadCounts = async (req, res) => {
+  const userId = new mongoose.Types.ObjectId(req.user.id);
+
+  const unreadCounts = await Chat.aggregate([
+    { $match: { receiverId: userId, isRead: { $ne: true } } },
+    { $group: { _id: 0, count: { $sum: 1 } } },
+  ]);
+
+    const count = unreadCounts.length > 0 ? unreadCounts[0].count : 0;
+
+  return res.status(200).json({ success: true, count: count });
 };
 
 export const saveMessage = async (data) => {
@@ -29,7 +46,7 @@ export const getUserChats = async (req, res) => {
 
   // Validate ObjectId format
   if (!mongoose.Types.ObjectId.isValid(userId)) {
-    return res.status(400).json({ error: 'Invalid user ID' });
+    return res.status(400).json({ error: "Invalid user ID" });
   }
 
   try {
@@ -55,7 +72,6 @@ export const getUserChats = async (req, res) => {
     const uniqueChatUsers = [
       ...new Set(chatUsers.map((user) => user._id.toString())),
     ];
-    
 
     // Populate user details
     const users = await User.find({ _id: { $in: uniqueChatUsers } });
@@ -63,19 +79,20 @@ export const getUserChats = async (req, res) => {
     res.json(users);
   } catch (error) {
     console.error("Error fetching chat users:", error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: "Internal server error" });
   }
 };
-
-
 
 export const getUserSingleChat = async (req, res) => {
   const { userId } = req.params;
   const { otherUserId } = req.query;
 
   // Validate ObjectId format
-  if (!mongoose.Types.ObjectId.isValid(userId) || !mongoose.Types.ObjectId.isValid(otherUserId)) {
-    return res.status(400).json({ error: 'Invalid user ID(s)' });
+  if (
+    !mongoose.Types.ObjectId.isValid(userId) ||
+    !mongoose.Types.ObjectId.isValid(otherUserId)
+  ) {
+    return res.status(400).json({ error: "Invalid user ID(s)" });
   }
 
   try {
@@ -88,12 +105,23 @@ export const getUserSingleChat = async (req, res) => {
     }).sort({ timestamp: 1 });
 
     if (!messages.length) {
-      return res.status(404).json({ error: 'No messages found between users' });
+      return res.status(404).json({ error: "No messages found between users" });
     }
 
     res.json({ messages });
   } catch (error) {
     console.error("Error fetching single chat:", error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: "Internal server error" });
   }
+};
+
+export const markAsRead = async (req, res) => {
+  const { chatWithUserId } = req.body;
+  const userId = req.user.id;
+  await Chat.updateMany(
+    { senderId: chatWithUserId, receiverId: userId, isRead: false },
+    { $set: { isRead: true } }
+  );
+
+  return res.status(200).json({ success: true, message: "Marked as read" });
 };

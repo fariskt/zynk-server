@@ -69,16 +69,19 @@ export const loginUser = async (req, res) => {
   if (!user) {
     return res.status(400).json({ message: "User not exists" });
   }
+
+  const matchPassword = await bcrypt.compare(password, user.password);  
+  if (!matchPassword) {
+    return res.status(400).json({ message: "Invalid email or password" });
+  }
+  
   if (!user.isVerified) {
     return res
       .status(400)
       .json({ message: "Please verify your account to login" });
   }
 
-  const matchPassword = await bcrypt.compare(password, user.password);
-  if (!matchPassword) {
-    return res.status(400).json({ message: "Invalid email or password" });
-  }
+  
 
   const accessToken = generateAccessToken({
     id: user._id,
@@ -125,7 +128,7 @@ export const forgotPassword = async (req, res) => {
   user.resetPasswordExpires = resetTokenExpiration;
   await user.save();
 
-  const resetLink = `http://localhost:3000/reset-password?token=${resetToken}`;
+  const resetLink = `https://zynk-social-media.vercel.app/reset-password?token=${resetToken}`;
   const emailBody = `Click the link below to reset your password:\n\n${resetLink}`;
 
   await sendEmail(user.email, "Password reset request", emailBody);
