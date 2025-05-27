@@ -24,7 +24,7 @@ import { videoCall } from './sockets/video.js';
 connectDB();
 
 app.use(cors({
-    origin: ["http://localhost:3000", "https://zynk-social-media.vercel.app","https://zynk-social-media.onrender.com"],
+    origin: ["http://localhost:3000", "https://zynk-social-media.vercel.app"],
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true, 
 }));
@@ -35,7 +35,7 @@ app.use(cookieParser());
 
 const io = new Server(server, {
     cors: {
-        origin: ["https://zynk-social-media.vercel.app","https://zynk-social-media.onrender.com"],
+        origin: "https://zynk-social-media.vercel.app",
         methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
         credentials: true,
     }
